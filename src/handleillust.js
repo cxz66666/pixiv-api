@@ -1,7 +1,10 @@
 const { Illust } = require("./apimodel");
-const handleSearchIllust = (illusts, number) => {
+const handleSearchIllust = (illusts, number, r18 = 0) => {
   let ans = [];
   let ill = illusts;
+  ill = ill.filter((r) => {
+    return r18 ? r.sanity_level > 4 : r.sanity_level <= 4;
+  });
   ill = ill.sort((a, b) => {
     return a.total_bookmarks < b.total_bookmarks;
   });
