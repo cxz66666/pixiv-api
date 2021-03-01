@@ -23,17 +23,24 @@ router.get("/authinfo", (req, res) => {
 router.get("/random", (req, res) => {
   let keyword = req.query.keyword;
   let r18 = req.query.r18;
+
   if (!r18) r18 = 0;
   // console.log(typeof r18);
 
-  let t = pixiv.searchIllustPopularPreview(keyword);
+  let t;
+  if (keyword) t = pixiv.searchIllustPopularPreview(keyword);
+  else
+    t = pixiv.illustRanking({
+      mode: r18 ? "day_female_r18" : "day_female",
+    });
 
   t.then((data) => {
-    if (!data.illusts.length) {
+    if (data.illusts.length === 0) {
       res.json({ code: 404, error: "没有符合条件的色图（。）" });
       return;
     } else {
       let ans = handleSearchIllust(data.illusts, 10, r18);
+      console.log(ans);
       let Random = ans[Math.floor(Math.random() * ans.length)];
       if (!Random) {
         res.json({ code: 404, msg: "NOT FOUND" });
