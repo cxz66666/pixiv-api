@@ -2,12 +2,24 @@ var express = require("express");
 var router = express.Router();
 const { Ok, Err } = require("./apiResponse");
 const { handleSearchIllust } = require("../src/handleillust");
+const { saveUrl } = require("../src/saveimg");
 let pixiv;
 
 const setPixiv = (p) => {
   pixiv = p;
 };
-
+router.get("/", (req, res) => {
+  console.log(req.query);
+  let url = req.query.url;
+  if (!url) {
+    res.json(Err("Don't HAVE A URL"));
+    return;
+  }
+  saveUrl(url).then((finalUrl) => {
+    res.json({ url: finalUrl });
+    return;
+  });
+});
 router.get("/authinfo", (req, res) => {
   let token = req.query.token;
   //   console.log(req.query);
@@ -20,7 +32,7 @@ router.get("/authinfo", (req, res) => {
   res.json(Err("NOT AUTH"));
   return;
 });
-router.get("/random", (req, res) => {
+router.get("/random", async (req, res) => {
   let keyword = req.query.keyword;
   let r18 = req.query.r18;
 
@@ -46,18 +58,20 @@ router.get("/random", (req, res) => {
         res.json({ code: 404, msg: "NOT FOUND" });
         return;
       }
-      res.json({
-        code: 0,
-        p: 0,
-        url: `https://www.pixiv.net/artworks/${Random.id}`,
-        file: Random.urls[0],
+      saveUrl(Random.urls[0]).then((filePath) => {
+        res.json({
+          code: 0,
+          p: 0,
+          url: `https://www.pixiv.net/artworks/${Random.id}`,
+          file: filePath,
+        });
+        return;
       });
-      return;
     }
   });
 });
 router.get("/searchIllust", (req, res) => {
-  let keykeyword = req.query.keykeyword;
+  let keyword = req.query.keyword;
   if (!keyword) {
     res.json(Err("keyword IS　REQUIRED"));
     return;

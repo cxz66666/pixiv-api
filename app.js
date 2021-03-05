@@ -8,6 +8,7 @@ const Fse = require("fs-extra");
 const Path = require("path");
 const pixivApi = require("./src/pixiv-api-client-mod");
 const { applyProxyConfig } = require("./src/proxy");
+const { applyRootPath } = require("./src/saveimg");
 const { setPixiv } = require("./routers/api");
 var bodyParser = require("body-parser");
 //加载cookies模块
@@ -75,6 +76,9 @@ async function Init() {
   if (config.proxy) {
     applyProxyConfig(config.proxy);
   }
+
+  applyRootPath(config.store_path, config.pre_url);
+
   if (config.refresh_token) {
     await relogin(config.refresh_token);
   }

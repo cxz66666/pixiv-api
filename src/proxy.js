@@ -3,7 +3,7 @@ const flatMap = require("lodash.flatmap");
 const SocksProxyAgent = require("socks-proxy-agent");
 const HttpsProxyAgent = require("https-proxy-agent");
 const PixivApi = require("./pixiv-api-client-mod");
-
+const saveimg = require("./saveimg");
 const envNames = flatMap(["all_proxy", "https_proxy", "http_proxy"], (name) => [
   name,
   name.toUpperCase(),
@@ -30,6 +30,7 @@ const applyProxyConfig = (proxy) => {
   if (sysProxy) delSysProxy();
   if (agent) {
     PixivApi.setAgent(agent);
+    saveimg.setAgent(agent);
     global.proxyAgent = agent;
   }
 };
