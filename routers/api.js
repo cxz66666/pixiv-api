@@ -1,7 +1,11 @@
 var express = require("express");
 var router = express.Router();
 const { Ok, Err } = require("./apiResponse");
-const { handleSearchIllust } = require("../src/handleillust");
+const {
+  handleSearchIllust,
+  handleSearchUser,
+  handleUserIllust,
+} = require("../src/handleillust");
 const { saveUrl } = require("../src/saveimg");
 let pixiv;
 
@@ -20,6 +24,34 @@ router.get("/", (req, res) => {
     return;
   });
 });
+router.get("/test", (req, res) => {
+  let type = req.query.type;
+  let option;
+  if (pixiv[type]) {
+    let ans = pixiv[type]();
+    res.json(Ok(auth));
+    return;
+  }
+  res.json(Err("NOT TYPE"));
+  return;
+});
+router.get("/searchUser", async (req, res) => {
+  let word = req.query.word;
+  if (word) {
+    let users = await pixiv.searchUser(word);
+    users = handleSearchUser(users, 10);
+    res.json({
+      code: 0,
+      p: 0,
+      number: users.length,
+      users,
+    });
+    return;
+  } else {
+    res.json(Err("NO WORD"));
+    return;
+  }
+});
 router.get("/authinfo", (req, res) => {
   let token = req.query.token;
   //   console.log(req.query);
@@ -32,6 +64,22 @@ router.get("/authinfo", (req, res) => {
   res.json(Err("NOT AUTH"));
   return;
 });
+router.get("/userIllust", async (req, res) => {
+  let id = req.query.id;
+  if (id) {
+    let illusts = (await pixiv.userIllusts(id)).illusts;
+    let UserIllusts = await handleUserIllust(illusts, 10, 1);
+    if (!UserIllusts.id) {
+      res.json(Err("Don't find user!"));
+      return;
+    } else {
+      res.json(Ok(UserIllusts));
+    }
+  } else {
+    res.json(Err("Don't find user!"));
+    return;
+  }
+});
 router.get("/random", async (req, res) => {
   let keyword = req.query.keyword;
   let r18 = req.query.r18;
@@ -40,75 +88,62 @@ router.get("/random", async (req, res) => {
   // console.log(typeof r18);
 
   let t;
-  if (keyword) t = pixiv.searchIllustPopularPreview(keyword);
-  else
-    t = pixiv.illustRanking({
-      mode: r18 ? "day_female_r18" : "day_female",
-    });
-
-  t.then((data) => {
+  try {
+    if (keyword) {
+      t = pixiv.searchIllustPopularPreview(keyword, {
+        search_target: "title_and_caption",
+      });
+    } else {
+      t = pixiv.illustRecommended();
+    }
+  } catch (error) {
+    console.log(error);
+  }
+  t.then(async (data) => {
     if (data.illusts.length === 0) {
       res.json({ code: 404, error: "没有符合条件的色图（。）" });
       return;
     } else {
-      let ans = handleSearchIllust(data.illusts, 10, r18);
-      console.log(ans);
-      let Random = ans[Math.floor(Math.random() * ans.length)];
-      if (!Random) {
+      let Random =
+        data.illusts[Math.floor(Math.random() * data.illusts.length)];
+
+      let ans = await handleSearchIllust([Random], 1, r18);
+      if (!ans) {
         res.json({ code: 404, msg: "NOT FOUND" });
         return;
       }
-      saveUrl(Random.urls[0]).then((filePath) => {
-        res.json({
-          code: 0,
-          p: 0,
-          url: `https://www.pixiv.net/artworks/${Random.id}`,
-          file: filePath,
-        });
-        return;
+      res.json({
+        code: 0,
+        p: 0,
+        url: `https://www.pixiv.net/artworks/${Random.id}`,
+        file: ans[0].urls,
       });
+      return;
     }
-  });
+  }).catch((r) => console.log(r));
 });
-router.get("/searchIllust", (req, res) => {
+
+router.get("/searchIllust", async (req, res) => {
   let keyword = req.query.keyword;
   if (!keyword) {
     res.json(Err("keyword IS　REQUIRED"));
     return;
   }
 
-  let t = pixiv.searchIllustPopularPreview(keyword);
-  t.then((data) => {
-    if (!data.illusts.length) {
-      res.json(Err("NOT FOUND"));
-      return;
-    } else {
-      let ans = handleSearchIllust(data.illusts, 10);
-      res.json(Ok({ ans, length: ans.length }));
-      return;
-    }
+  let data = await pixiv.searchIllustPopularPreview(keyword, {
+    search_target: "exact_match_for_tags",
   });
-});
 
-router.get("/userIllust", (req, res) => {
-  let uid = req.query.uid;
-  if (!uid) {
-    res.json(Err("UID IS　REQUIRED"));
+  if (!data.illusts.length) {
+    res.json(Err("NOT FOUND"));
+    return;
+  } else {
+    let ans = await handleSearchIllust(data.illusts, 10);
+    res.json(Ok({ ans, length: ans.length }));
     return;
   }
-  let number = req.query.number ? req.query.number : 3;
-  let t = pixiv.userIllusts(uid);
-  t.then((data) => {
-    if (!data.illusts.length) {
-      res.json(Err("DON'T FOUND ILLUSTS"));
-      return;
-    } else {
-      let ans = handleSearchIllust(data.illusts, number);
-      res.json(Ok({ ans, length: ans.length }));
-      return;
-    }
-  });
 });
+
 module.exports = {
   setPixiv,
   router,

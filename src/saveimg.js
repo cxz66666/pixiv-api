@@ -1,6 +1,6 @@
 const fse = require("fs-extra");
 const path = require("path");
-let ROOTPATH = "e:\\linux\\Compressed\\pixiv-api";
+let ROOTPATH = "D:\\Compressed\\pixiv-api";
 let PRE_URL = "https://raynor.top";
 
 let axios;
@@ -32,14 +32,15 @@ const saveUrl = async (url) => {
   let absDirPath = path.resolve(ROOTPATH, dirUrl);
   let filename = urlObject.base;
   // console.log(PRE_URL, dirUrl, filename);
-  let httpUrl = PRE_URL + dirUrl + filename;
+  let httpUrl = PRE_URL + dirUrl + "/" + filename;
   let absFilePath = path.join(absDirPath, filename);
+  // console.log(absFilePath);
   if (await fse.exists(absFilePath)) return httpUrl;
 
   await fse.ensureDir(absDirPath);
   const response = await axios.get(url);
-  console.log(absFilePath);
-  console.log(httpUrl);
+  // console.log(absFilePath);
+  // console.log(httpUrl);
   response.data.pipe(fse.createWriteStream(absFilePath));
   return httpUrl;
 };

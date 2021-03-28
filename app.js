@@ -3,6 +3,7 @@
 var express = require("express");
 // 加载模板处理模块
 // var swig = require("swig");
+require("colors");
 
 const Fse = require("fs-extra");
 const Path = require("path");
@@ -10,9 +11,18 @@ const pixivApi = require("./src/pixiv-api-client-mod");
 const { applyProxyConfig } = require("./src/proxy");
 const { applyRootPath } = require("./src/saveimg");
 const { setPixiv } = require("./routers/api");
+const LoginProtocol = require("./src/protocol");
+const OauthLogin = require("./src/pixiv-oauth-login");
+const receiveLoginCode = require("./src/protocol/receiver");
+const readline = require("readline-sync");
+const open = require("open");
+
 var bodyParser = require("body-parser");
 //加载cookies模块
 var Cookies = require("cookies");
+const { readlink } = require("fs");
+const PixivApi = require("./src/pixiv-api-client-mod");
+const { data } = require("./src/protocol/config");
 
 const CONFIG_FILE_PATH = "config.json";
 // 加载数据库模块
@@ -76,31 +86,49 @@ async function Init() {
   if (config.proxy) {
     applyProxyConfig(config.proxy);
   }
+  if (process.platform === "win32" && (await LoginProtocol.exists())) {
+    await LoginProtocol.unInstall();
+  }
+  if (config.refresh_token) {
+    await loginBy_AK(config.refresh_token);
+  } else {
+    const { login_url, code_verifier } = OauthLogin();
+    let code;
+    if (
+      process.platform === "win32" &&
+      (await LoginProtocol.canInstall()) &&
+      (await LoginProtocol.install())
+    ) {
+      console.log("Login URL:", login_url.cyan);
+      console.log(
+        "Waiting login... More details:",
+        "https://git.io/Jt6Lj".cyan
+      );
+      open(login_url);
+      code = await receiveLoginCode();
+      console.log("code:", code);
+      await LoginProtocol.unInstall();
+    } else {
+      console.log(
+        "Before login, please read this first ->",
+        "https://git.io/Jt6Lj".cyan
+      );
+      open(login_url);
+      code = (() => {
+        while (true) {
+          const input = readline.question("Code: ".yellow);
+          if (input) return input;
+        }
+      })();
+    }
+    await loginBy_Token(code, code_verifier);
+  }
 
   applyRootPath(config.store_path, config.pre_url);
-
-  if (config.refresh_token) {
-    await relogin(config.refresh_token);
-  }
   return config.port;
 }
 
 let reloginInterval;
-async function relogin(refresh_token) {
-  if (!refresh_token) return false;
-  let pixiv = new pixivApi();
-  let t = await pixiv.refreshAccessToken(refresh_token);
-  console.log(t);
-  setPixiv(pixiv);
-  await saveRefreshToken(t.refresh_token);
-  reloginInterval = setInterval(async () => {
-    let config = Fse.readJsonSync(CONFIG_FILE_PATH);
-    let t = await pixiv.refreshAccessToken(config.refresh_token);
-    await saveRefreshToken(t.refresh_token);
-    console.log("access_token:", t.access_token);
-    console.log("refresh_token:", t.refresh_token);
-  }, 30 * 60 * 1000);
-}
 
 async function saveRefreshToken(refresh_token) {
   let config = await Fse.readJsonSync(CONFIG_FILE_PATH);
@@ -112,4 +140,34 @@ async function saveRefreshToken(refresh_token) {
     return false;
   }
   return true;
+}
+
+async function loginBy_Token(code, code_verifier) {
+  let pixiv = new pixivApi();
+  await pixiv.tokenRequest(code, code_verifier);
+  const refresh_token = pixiv.authInfo().refresh_token;
+  setPixiv(pixiv);
+  await saveRefreshToken(refresh_token);
+  reloginInterval = setInterval(async () => {
+    let config = Fse.readJsonSync(CONFIG_FILE_PATH);
+    let t = await pixiv.refreshAccessToken(config.refresh_token);
+    await saveRefreshToken(t.refresh_token);
+    console.log(Date.now(), "access_token:", t.access_token);
+    console.log(Date.now(), "refresh_token:", t.refresh_token);
+  }, 30 * 60 * 1000);
+}
+
+async function loginBy_AK(refresh_token) {
+  if (!refresh_token) return false;
+  let pixiv = new pixivApi();
+  let t = await pixiv.refreshAccessToken(refresh_token);
+  setPixiv(pixiv);
+  await saveRefreshToken(t.refresh_token);
+  reloginInterval = setInterval(async () => {
+    let config = Fse.readJsonSync(CONFIG_FILE_PATH);
+    let t = await pixiv.refreshAccessToken(config.refresh_token);
+    await saveRefreshToken(t.refresh_token);
+    console.log(Date.now(), "access_token:", t.access_token);
+    console.log(Date.now(), "refresh_token:", t.refresh_token);
+  }, 30 * 60 * 1000);
 }
