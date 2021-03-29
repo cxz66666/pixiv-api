@@ -27,6 +27,7 @@ const handleSearchIllust = async (illusts, number, r18 = 0) => {
     });
 
     preurl = await Promise.all(preurl);
+    console.log(preurl);
     nowill.urls = preurl;
     ans.push(nowill);
   }

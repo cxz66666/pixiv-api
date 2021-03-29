@@ -41,8 +41,14 @@ const saveUrl = async (url) => {
   const response = await axios.get(url);
   // console.log(absFilePath);
   // console.log(httpUrl);
-  response.data.pipe(fse.createWriteStream(absFilePath));
-  return httpUrl;
+
+  return new Promise((resolve, reject) => {
+    response.data.pipe(fse.createWriteStream(absFilePath));
+    response.data.on("end", () => {
+      resolve(httpUrl);
+    });
+    response.data.on("error", reject);
+  });
 };
 
 module.exports = {
