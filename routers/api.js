@@ -39,6 +39,7 @@ router.get("/searchUser", async (req, res) => {
   let word = req.query.word;
   if (word) {
     let users = await pixiv.searchUser(word);
+
     users = handleSearchUser(users, 10);
     res.json({
       code: 0,
@@ -68,7 +69,7 @@ router.get("/userIllust", async (req, res) => {
   let id = req.query.id;
   if (id) {
     let illusts = (await pixiv.userIllusts(id)).illusts;
-    let UserIllusts = await handleUserIllust(illusts, 10, 1);
+    let UserIllusts = await handleUserIllust(illusts, 4, 1);
     if (!UserIllusts.id) {
       res.json(Err("Don't find user!"));
       return;

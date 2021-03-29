@@ -72,9 +72,9 @@ const handleUserIllust = async (illusts, number, r18 = 0) => {
   return ans;
 };
 const handleSearchUser = (users, number) => {
-  users = users.slice(0, number);
+  users = users.user_previews.slice(0, number);
   let ans = [];
-  users.user_previews.map((r) => {
+  users.map((r) => {
     let nowuser = new User();
     nowuser.id = r.user.id;
     nowuser.name = r.user.name;
