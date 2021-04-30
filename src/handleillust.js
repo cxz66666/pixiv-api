@@ -23,6 +23,7 @@ const handleSearchIllust = async (illusts, number, r18 = 0) => {
     r.meta_pages.map((rx) => {
       if (rx.image_urls) {
         preurl.push(saveUrl(rx.image_urls.original));
+        return;
       }
     });
 
@@ -61,6 +62,7 @@ const handleUserIllust = async (illusts, number, r18 = 0) => {
     r.meta_pages.map((rx) => {
       if (rx.image_urls) {
         preurl.push(saveUrl(rx.image_urls.original));
+        return;
       }
     });
 
