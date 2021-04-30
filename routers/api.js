@@ -91,7 +91,7 @@ router.get("/random", async (req, res) => {
   let t;
   try {
     if (keyword) {
-      t = pixiv.searchIllustPopularPreview(keyword, {
+      t = pixiv.searchIllust(keyword, {
         search_target: "title_and_caption",
       });
     } else {
@@ -105,10 +105,7 @@ router.get("/random", async (req, res) => {
       res.json({ code: 404, error: "没有符合条件的色图（。）" });
       return;
     } else {
-      let Random =
-        data.illusts[Math.floor(Math.random() * data.illusts.length)];
-
-      let ans = await handleSearchIllust([Random], 1, r18);
+      let ans = await handleSearchIllust(data.illusts, 1, r18);
       if (!ans) {
         res.json({ code: 404, msg: "NOT FOUND" });
         return;
@@ -116,7 +113,7 @@ router.get("/random", async (req, res) => {
       res.json({
         code: 0,
         p: 0,
-        url: `https://www.pixiv.net/artworks/${Random.id}`,
+        url: `https://www.pixiv.net/artworks/${ans[0].id}`,
         file: ans[0].urls,
       });
       return;

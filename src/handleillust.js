@@ -1,14 +1,18 @@
 const { Illust, User, UserIllusts } = require("./apimodel");
 const { saveUrl } = require("./saveimg");
-const handleSearchIllust = async (illusts, number, r18 = 0) => {
+const handleSearchIllust = async (illusts, number, r18 = 0, isTrue = false) => {
   let ans = [];
   let ill = illusts;
 
   ill = ill.sort((a, b) => {
-    return a.total_bookmarks < b.total_bookmarks;
+    return a.total_view < b.total_view;
   });
-
-  ill = ill.slice(0, number);
+  if (number === 1) {
+    ill = ill.slice(0, 10);
+    ill = [ill[Math.floor(Math.random() * ill.length)]];
+  } else {
+    ill = ill.slice(0, number);
+  }
   for (let r of ill) {
     let nowill = new Illust();
     nowill.id = r.id;
@@ -20,13 +24,15 @@ const handleSearchIllust = async (illusts, number, r18 = 0) => {
       preurl.push(saveUrl(r.meta_single_page.original_image_url));
     }
 
-    r.meta_pages.map((rx) => {
-      if (rx.image_urls) {
-        preurl.push(saveUrl(rx.image_urls.original));
-        return;
-      }
-    });
-
+    // r.meta_pages.map((rx) => {
+    //   if (rx.image_urls) {
+    //     preurl.push(saveUrl(rx.image_urls.original));
+    //     return;
+    //   }
+    // });
+    if (r.meta_pages.length && r.meta_pages[0].image_urls) {
+      preurl.push(saveUrl(r.meta_pages[0].image_urls.original));
+    }
     preurl = await Promise.all(preurl);
     console.log(preurl);
     nowill.urls = preurl;
@@ -59,13 +65,15 @@ const handleUserIllust = async (illusts, number, r18 = 0) => {
       preurl.push(saveUrl(r.meta_single_page.original_image_url));
     }
 
-    r.meta_pages.map((rx) => {
-      if (rx.image_urls) {
-        preurl.push(saveUrl(rx.image_urls.original));
-        return;
-      }
-    });
-
+    // r.meta_pages.map((rx) => {
+    //   if (rx.image_urls) {
+    //     preurl.push(saveUrl(rx.image_urls.original));
+    //     return;
+    //   }
+    // });
+    if (r.meta_pages.length && r.meta_pages[0].image_urls) {
+      preurl.push(saveUrl(r.meta_pages[0].image_urls.original));
+    }
     nowill.urls = await Promise.all(preurl);
     ans.illusts.push(nowill);
   }
